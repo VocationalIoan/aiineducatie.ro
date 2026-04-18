@@ -471,6 +471,15 @@ function handleChoice(label, value, key) {
   }, 900);
 }
 
+function getFullLabel(key, val) {
+  const step = STEPS.find(s => s.key === key);
+  if (step && step.options) {
+    const opt = step.options.find(o => o.value === val);
+    if (opt) return opt.label;
+  }
+  return val;
+}
+
 function showGatedForm() {
   setProgress(100);
   updatePhase(5);
@@ -487,16 +496,35 @@ function showGatedForm() {
   btn.onclick = async () => {
     const email = inp.value.trim();
     if (!email || !email.includes('@')) { alert('Te rog introdu un email valid.'); return; }
+    
     userData.email = email;
     btn.disabled = true;
     btn.textContent = 'Se salvează...';
+
+    // Calculăm codul Holland aici, înainte de a trimite spre baza de date
+    const hCode = (userData.holland1 + userData.holland2).substring(0,2);
+    
+    // Construim pachetul de date curat pentru Anamneza ta din Excel
+    const crmData = {
+      name: userData.name,
+      email: email,
+      hollandCode: hCode,
+      hollandAnswers: `Act: ${userData.holland1} | Dom: ${userData.holland2} | Med: ${userData.holland3}`,
+      situation: getFullLabel('situation', userData.situation),
+      trigger: getFullLabel('trigger', userData.trigger),
+      valoare1: getFullLabel('valoare1', userData.valoare1),
+      valoare2: getFullLabel('valoare2', userData.valoare2),
+      competenta1: getFullLabel('competenta1', userData.competenta1),
+      evita: getFullLabel('evita', userData.evita),
+      ai_relation: getFullLabel('ai_relation', userData.ai_relation)
+    };
     
     try {
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
         cache: 'no-cache',
-        body: JSON.stringify(userData)
+        body: JSON.stringify(crmData) // Trimitem datele formatate uman
       });
       showFinalResult();
     } catch (e) {
